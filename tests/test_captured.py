@@ -1,7 +1,7 @@
 from session import Session
 
 
-def test_display_after_capture_and_new_game():
+def test_display_after_capture_and_new_game() -> None:
     session = Session()
     assert session.view()["captured"] == []
     session.play("e2", "e4")
@@ -12,7 +12,7 @@ def test_display_after_capture_and_new_game():
     assert session.view()["captured"] == []
 
 
-def test_undo_restores_captured():
+def test_undo_restores_captured() -> None:
     session = Session()
     session.play("e2", "e4")
     session.play("d7", "d5")
@@ -21,7 +21,7 @@ def test_undo_restores_captured():
     assert session.view()["captured"] == []
 
 
-def test_promotion_is_not_a_capture():
+def test_promotion_is_not_a_capture() -> None:
     session = Session()
     session.dispatch({"action": "promotion-setup"})
     assert session.view()["captured"] == ["bP", "wP"]
