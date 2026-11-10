@@ -27,10 +27,17 @@ def test_capturing_the_last_piece_ends_the_game_in_a_draw():
     assert view["moves"] == ["d4xe5"]
 
 
-@pytest.mark.parametrize("extra", [
-    {"a2": "wP"}, {"a2": "bP"}, {"c3": "wN"}, {"c3": "bB"},
-    {"a1": "wR"}, {"a8": "bQ"},
-])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"a2": "wP"},
+        {"a2": "bP"},
+        {"c3": "wN"},
+        {"c3": "bB"},
+        {"a1": "wR"},
+        {"a8": "bQ"},
+    ],
+)
 def test_king_plus_another_piece_is_not_this_draw(extra):
     position = [{"e1": "wK", "e8": "bK", **extra}, "w"]
     assert status(position) != "kings-only"

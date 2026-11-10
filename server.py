@@ -29,9 +29,11 @@ def make_server(port=8000):
             if self.path == "/api/state":
                 self.send_json(200, session.view())
                 return
-            routes = {"/": ("index.html", "text/html; charset=utf-8"),
-                      "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                      "/style.css": ("style.css", "text/css; charset=utf-8")}
+            routes = {
+                "/": ("index.html", "text/html; charset=utf-8"),
+                "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                "/style.css": ("style.css", "text/css; charset=utf-8"),
+            }
             if self.path not in routes:
                 self.send_json(404, {"error": "Not found"})
                 return

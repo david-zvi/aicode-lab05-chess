@@ -4,12 +4,19 @@ Check, checkmate and stalemate follow standard chess. There is no castling and n
 en passant. When only the two kings remain, the game ends at once in a draw.
 """
 
+from typing import Any
+
 FILES = "abcdefgh"
 BACK_ROW = "RNBQKBNR"
 
+# Square name to piece, e.g. {"e2": "wP"}.
+Board = dict[str, str]
+# [board, side to move]. A list so moves can update the side in place, hence Any.
+Position = list[Any]
 
-def new_position():
-    board = {}
+
+def new_position() -> Position:
+    board: Board = {}
     for file, piece in zip(FILES, BACK_ROW):
         board[file + "1"] = "w" + piece
         board[file + "2"] = "wP"
@@ -18,12 +25,12 @@ def new_position():
     return [board, "w"]
 
 
-def copy_position(position):
+def copy_position(position: Position) -> Position:
     """Copy the board and side to move."""
     return [position[0].copy(), position[1]]
 
 
-def coordinates(square):
+def coordinates(square: object) -> tuple[int, int]:
     if not isinstance(square, str) or len(square) != 2:
         raise ValueError("Expected a square such as e2")
     if square[0] not in FILES or square[1] not in "12345678":
@@ -31,23 +38,27 @@ def coordinates(square):
     return FILES.index(square[0]), int(square[1]) - 1
 
 
-def other(side):
+def other(side: str) -> str:
     return "b" if side == "w" else "w"
 
 
-def in_check(board, side):
-    king = next((square for square, piece in board.items() if piece == side + "K"), None)
+def in_check(board: Board, side: str) -> bool:
+    king = next(
+        (square for square, piece in board.items() if piece == side + "K"), None
+    )
     return king is not None and any(
-        king in reachable(board, square) for square, piece in board.items()
-        if piece[0] != side)
+        king in reachable(board, square)
+        for square, piece in board.items()
+        if piece[0] != side
+    )
 
 
-def only_kings(board):
+def only_kings(board: Board) -> bool:
     """True when exactly one white king and one black king remain."""
     return sorted(board.values()) == ["bK", "wK"]
 
 
-def status(position):
+def status(position: Position) -> str | None:
     """Return "kings-only", "check", "checkmate", "stalemate", or None.
 
     "kings-only" is a draw: only the two kings remain and no further moves are allowed.
@@ -57,19 +68,22 @@ def status(position):
     if only_kings(board):
         return "kings-only"
     check = in_check(board, turn)
-    if any(legal_moves(position, square) for square, piece in board.items()
-           if piece[0] == turn):
+    if any(
+        legal_moves(position, square)
+        for square, piece in board.items()
+        if piece[0] == turn
+    ):
         return "check" if check else None
     return "checkmate" if check else "stalemate"
 
 
-def winner(position):
+def winner(position: Position) -> str | None:
     if status(position) == "checkmate":
         return "White" if position[1] == "b" else "Black"
     return None
 
 
-def legal_moves(position, source):
+def legal_moves(position: Position, source: str) -> list[str]:
     """Moves for the side to move that do not leave its own king in check."""
     coordinates(source)
     board, turn = position[:2]
@@ -85,7 +99,7 @@ def legal_moves(position, source):
     return targets
 
 
-def reachable(board, source):
+def reachable(board: Board, source: str) -> list[str]:
     """Squares the piece on source attacks or can move to, ignoring check."""
     piece = board[source]
     turn = piece[0]
@@ -105,9 +119,13 @@ def reachable(board, source):
                 home = 1 if turn == "w" else 6
                 allowed = (
                     (dx == 0 and dy == direction and not occupant)
-                    or (dx == 0 and dy == 2 * direction and y == home
+                    or (
+                        dx == 0
+                        and dy == 2 * direction
+                        and y == home
                         and not occupant
-                        and FILES[x] + str(y + direction + 1) not in board)
+                        and FILES[x] + str(y + direction + 1) not in board
+                    )
                     or (abs(dx) == 1 and dy == direction and bool(occupant))
                 )
             elif kind == "N":
@@ -117,9 +135,11 @@ def reachable(board, source):
             else:
                 diagonal = abs(dx) == abs(dy)
                 straight = dx == 0 or dy == 0
-                allowed = ((kind == "B" and diagonal)
-                           or (kind == "R" and straight)
-                           or (kind == "Q" and (diagonal or straight)))
+                allowed = (
+                    (kind == "B" and diagonal)
+                    or (kind == "R" and straight)
+                    or (kind == "Q" and (diagonal or straight))
+                )
                 if allowed:
                     sx = (dx > 0) - (dx < 0)
                     sy = (dy > 0) - (dy < 0)
@@ -136,12 +156,14 @@ def reachable(board, source):
 PROMOTION_PIECES = ("Q", "R", "B", "N")
 
 
-def promotes(position, source, target):
+def promotes(position: Position, source: str, target: str) -> bool:
     piece = position[0].get(source)
     return bool(piece) and piece[1] == "P" and target[1] in "18"
 
 
-def move(position, source, target, promotion=None):
+def move(
+    position: Position, source: str, target: str, promotion: str | None = None
+) -> str:
     """Apply a move in place. Return a short move label.
 
     A pawn reaching the last rank needs promotion: "Q", "R", "B" or "N".
@@ -161,6 +183,6 @@ def move(position, source, target, promotion=None):
     if promoting:
         board[target] = piece[0] + promotion
     position[1] = other(position[1])
-    suffix = {"check": "+", "checkmate": "#"}.get(status(position), "")
-    chosen = "=" + promotion if promoting else ""
+    suffix = {"check": "+", "checkmate": "#"}.get(status(position) or "", "")
+    chosen = f"={promotion}" if promoting else ""
     return source + ("x" if captured else "-") + target + chosen + suffix

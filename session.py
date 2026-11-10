@@ -14,10 +14,14 @@ from game import (
 # Legal from the standard starting position under this game's rules.
 # Next move: b7-a8, capturing a rook and reaching the last rank.
 PROMOTION_SETUP = [
-    ("a2", "a4"), ("h7", "h5"),
-    ("a4", "a5"), ("h5", "h4"),
-    ("a5", "a6"), ("h4", "h3"),
-    ("a6", "b7"), ("h3", "g2"),
+    ("a2", "a4"),
+    ("h7", "h5"),
+    ("a4", "a5"),
+    ("h5", "h4"),
+    ("a5", "a6"),
+    ("h4", "h3"),
+    ("a6", "b7"),
+    ("h3", "g2"),
 ]
 
 
@@ -38,8 +42,16 @@ class Session:
         # No en passant in this variant, so a capture is always on the target square.
         taken = self.position[0].get(target)
         label = move(self.position, source, target, promotion)
-        self.history.append({"source": source, "target": target, "promotion": promotion,
-                             "label": label, "before": before, "taken": taken})
+        self.history.append(
+            {
+                "source": source,
+                "target": target,
+                "promotion": promotion,
+                "label": label,
+                "before": before,
+                "taken": taken,
+            }
+        )
         self.notation.append(label)
         if taken:
             self.captured = sorted(self.captured + [taken])
@@ -64,8 +76,7 @@ class Session:
         entry = self.undo_one()
         if entry:
             undone.append(entry)
-        while (self.opponent == "computer" and self.history
-               and self.position[1] == "b"):
+        while self.opponent == "computer" and self.history and self.position[1] == "b":
             undone.append(self.undo_one())
         return undone
 
@@ -92,8 +103,11 @@ class Session:
         }
 
     def computer_to_move(self):
-        return (self.opponent == "computer" and self.position[1] == "b"
-                and status(self.position) not in ("checkmate", "stalemate", "kings-only"))
+        return (
+            self.opponent == "computer"
+            and self.position[1] == "b"
+            and status(self.position) not in ("checkmate", "stalemate", "kings-only")
+        )
 
     def sidebar(self):
         return {"captured": self.captured}
@@ -103,7 +117,9 @@ class Session:
         if command == "move":
             if self.computer_to_move():
                 raise ValueError("Wait for the computer's move")
-            self.play(action.get("source"), action.get("target"), action.get("promotion"))
+            self.play(
+                action.get("source"), action.get("target"), action.get("promotion")
+            )
         elif command == "computer-move":
             if not self.computer_to_move():
                 raise ValueError("It is not the computer's turn")
@@ -111,8 +127,12 @@ class Session:
         elif command == "legal":
             source = action.get("source")
             targets = legal_moves(self.position, source)
-            return {"targets": targets,
-                    "promotions": [t for t in targets if promotes(self.position, source, t)]}
+            return {
+                "targets": targets,
+                "promotions": [
+                    t for t in targets if promotes(self.position, source, t)
+                ],
+            }
         elif command == "undo":
             self.undo()
         elif command == "new":
@@ -123,8 +143,12 @@ class Session:
                 self.play(source, target)
         elif command == "save":
             # Board, turn, notation, captures and undo history are rebuilt by replaying on load.
-            return {"opponent": self.opponent,
-                    "moves": [[e["source"], e["target"], e["promotion"]] for e in self.history]}
+            return {
+                "opponent": self.opponent,
+                "moves": [
+                    [e["source"], e["target"], e["promotion"]] for e in self.history
+                ],
+            }
         elif command == "load":
             self.load(action.get("game"))
         else:

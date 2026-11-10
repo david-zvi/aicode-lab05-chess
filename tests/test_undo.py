@@ -16,8 +16,9 @@ def computer_session():
 def test_undo_reverses_one_move_in_two_player_mode():
     session = Session()
     play(session, ("e2", "e4"), ("e7", "e5"))
-    after_first = dict(session.view(), board=dict(session.position[0]),
-                       moves=list(session.notation))
+    after_first = dict(
+        session.view(), board=dict(session.position[0]), moves=list(session.notation)
+    )
     play(session, ("g1", "f3"))
     view = session.dispatch({"action": "undo"})
     assert view["board"] == after_first["board"]
@@ -80,8 +81,9 @@ def test_undo_against_the_computer_reverses_reply_and_human_move():
     session = computer_session()
     play(session, ("e2", "e4"))
     session.dispatch({"action": "computer-move"})
-    after_first_pair = dict(session.view(), board=dict(session.position[0]),
-                       moves=list(session.notation))
+    after_first_pair = dict(
+        session.view(), board=dict(session.position[0]), moves=list(session.notation)
+    )
     play(session, ("d2", "d4"))
     session.dispatch({"action": "computer-move"})
     assert len(session.notation) == 4
@@ -126,7 +128,9 @@ def test_history_records_moves_for_replay():
     session = Session()
     play(session, ("e2", "e4"), ("e7", "e5"))
     assert [(e["source"], e["target"]) for e in session.history] == [
-        ("e2", "e4"), ("e7", "e5")]
+        ("e2", "e4"),
+        ("e7", "e5"),
+    ]
     assert session.history[0]["before"] == new_position()
     undone = session.undo()
     assert [(e["source"], e["target"]) for e in undone] == [("e7", "e5")]

@@ -72,7 +72,9 @@ def test_history_allows_undoing_earlier_moves(tmp_path):
 def test_promotion_and_captures(tmp_path):
     original = Session()
     original.dispatch({"action": "promotion-setup"})
-    original.dispatch({"action": "move", "source": "b7", "target": "a8", "promotion": "N"})
+    original.dispatch(
+        {"action": "move", "source": "b7", "target": "a8", "promotion": "N"}
+    )
     loaded = round_trip(original, tmp_path)
     assert loaded.view() == original.view()
     assert loaded.position[0]["a8"] == "wN"
@@ -82,21 +84,26 @@ def test_promotion_and_captures(tmp_path):
     assert loaded.captured == ["bP", "wP"]
 
 
-@pytest.mark.parametrize("game", [
-    None,                                              # no file chosen
-    "not a game",
-    [],
-    {},
-    {"opponent": "human"},
-    {"opponent": "human", "moves": "e2e4"},
-    {"opponent": "alien", "moves": []},
-    {"opponent": "human", "moves": [["e2", "e4"]]},
-    {"opponent": "human", "moves": [{"e2": "e4"}]},
-    {"opponent": "human", "moves": [[None, "e4", None]]},
-    {"opponent": "human", "moves": [["e2", 4, None]]},
-    {"opponent": "human", "moves": [["e2", "e4", "Q"]]},  # promotion on a normal move
-    {"opponent": "human", "moves": [["e2", "e4", None], ["e4", "e5", None]]},  # illegal
-])
+@pytest.mark.parametrize(
+    "game",
+    [
+        None,  # no file chosen
+        "not a game",
+        [],
+        {},
+        {"opponent": "human"},
+        {"opponent": "human", "moves": "e2e4"},
+        {"opponent": "alien", "moves": []},
+        {"opponent": "human", "moves": [["e2", "e4"]]},
+        {"opponent": "human", "moves": [{"e2": "e4"}]},
+        {"opponent": "human", "moves": [[None, "e4", None]]},
+        {"opponent": "human", "moves": [["e2", 4, None]]},
+        # promotion on a normal move
+        {"opponent": "human", "moves": [["e2", "e4", "Q"]]},
+        # illegal
+        {"opponent": "human", "moves": [["e2", "e4", None], ["e4", "e5", None]]},
+    ],
+)
 def test_invalid_save_is_rejected_and_game_kept(game):
     session = played(MOVES[:2])
     before = session.view()
