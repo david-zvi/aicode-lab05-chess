@@ -6,6 +6,7 @@ from game import (
     legal_moves,
     move,
     new_position,
+    promotes,
     status,
     winner,
 )
@@ -30,8 +31,8 @@ class Session:
         self.captured = []
         self.opponent = opponent
 
-    def play(self, source, target):
-        label = move(self.position, source, target)
+    def play(self, source, target, promotion=None):
+        label = move(self.position, source, target, promotion)
         self.notation.append(label)
         self.after_move()
 
@@ -61,13 +62,16 @@ class Session:
         if command == "move":
             if self.computer_to_move():
                 raise ValueError("Wait for the computer's move")
-            self.play(action.get("source"), action.get("target"))
+            self.play(action.get("source"), action.get("target"), action.get("promotion"))
         elif command == "computer-move":
             if not self.computer_to_move():
                 raise ValueError("It is not the computer's turn")
             self.play(*choose_move(self.position))
         elif command == "legal":
-            return {"targets": legal_moves(self.position, action.get("source"))}
+            source = action.get("source")
+            targets = legal_moves(self.position, source)
+            return {"targets": targets,
+                    "promotions": [t for t in targets if promotes(self.position, source, t)]}
         elif command == "new":
             self.__init__(action.get("opponent", "human"))
         elif command == "promotion-setup":
