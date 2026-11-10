@@ -1,7 +1,6 @@
 """Application actions and information shown beside the board."""
 
 from computer import choose_move
-from captured import missing_pieces
 from game import (
     legal_moves,
     move,
@@ -10,7 +9,6 @@ from game import (
     status,
     winner,
 )
-
 
 # Legal from the standard starting position under this game's rules.
 # Next move: b7-a8, capturing a rook and reaching the last rank.
@@ -32,12 +30,12 @@ class Session:
         self.opponent = opponent
 
     def play(self, source, target, promotion=None):
+        # No en passant in this variant, so a capture is always on the target square.
+        taken = self.position[0].get(target)
         label = move(self.position, source, target, promotion)
         self.notation.append(label)
-        self.after_move()
-
-    def after_move(self):
-        self.captured = missing_pieces(self.position)
+        if taken:
+            self.captured = sorted(self.captured + [taken])
 
     def view(self):
         return {
