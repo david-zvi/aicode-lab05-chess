@@ -26,12 +26,25 @@ class Session:
             raise ValueError("Unknown opponent")
         self.position = new_position()
         self.notation = []
+        self.history = []
         self.opponent = opponent
 
     def play(self, source, target):
         label = move(self.position, source, target)
         self.notation.append(label)
+        self.history.append([source, target])
         self.after_move()
+
+    def load(self, game):
+        """Replay a saved game into a fresh session; keep the current one if any step fails."""
+        if not isinstance(game, dict) or not isinstance(game.get("moves"), list):
+            raise ValueError("Not a saved game")
+        loaded = type(self)(game.get("opponent"))
+        for step in game["moves"]:
+            if not isinstance(step, list) or len(step) != 2:
+                raise ValueError("Not a saved game")
+            loaded.play(*step)
+        self.__dict__.update(vars(loaded))
 
     def after_move(self):
         pass
@@ -72,6 +85,11 @@ class Session:
             self.__init__()
             for source, target in PROMOTION_SETUP:
                 self.play(source, target)
+        elif command == "save":
+            # Board, turn and notation are rebuilt by replaying the moves on load.
+            return {"opponent": self.opponent, "moves": self.history}
+        elif command == "load":
+            self.load(action.get("game"))
         else:
             raise ValueError("Unknown action")
         return self.view()

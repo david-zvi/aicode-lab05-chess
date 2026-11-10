@@ -1,0 +1,103 @@
+import json
+
+import pytest
+
+from game import copy_position, new_position
+from session import Session
+
+MOVES = [("e2", "e4"), ("d7", "d5"), ("e4", "d5"), ("d8", "d5"), ("b1", "c3")]
+
+
+def played(moves=MOVES, opponent="human"):
+    session = Session(opponent)
+    for source, target in moves:
+        session.play(source, target)
+    return session
+
+
+def round_trip(session, tmp_path):
+    """Save through a real file and load into a fresh session."""
+    path = tmp_path / "game.json"
+    path.write_text(json.dumps(session.dispatch({"action": "save"})))
+    loaded = Session()
+    loaded.dispatch({"action": "load", "game": json.loads(path.read_text())})
+    return loaded
+
+
+def test_initial_game(tmp_path):
+    loaded = round_trip(Session(), tmp_path)
+    assert loaded.position == new_position()
+    assert loaded.view() == Session().view()
+
+
+def test_game_after_several_moves(tmp_path):
+    original = played()
+    loaded = round_trip(original, tmp_path)
+    assert loaded.position == original.position
+    assert loaded.view() == original.view()
+
+
+def test_player_to_move(tmp_path):
+    assert round_trip(played(MOVES[:4]), tmp_path).view()["turn"] == "w"
+    assert round_trip(played(MOVES), tmp_path).view()["turn"] == "b"
+
+
+@pytest.mark.parametrize("opponent", ["human", "computer"])
+def test_opponent_mode(opponent, tmp_path):
+    loaded = round_trip(played(MOVES[:2], opponent), tmp_path)
+    assert loaded.opponent == opponent
+    assert loaded.computer_to_move() is False
+
+
+def test_computer_still_to_move_after_load(tmp_path):
+    loaded = round_trip(played(MOVES[:1], "computer"), tmp_path)
+    assert loaded.computer_to_move()
+    loaded.dispatch({"action": "computer-move"})
+    assert len(loaded.notation) == 2
+
+
+def test_move_notation(tmp_path):
+    original = played()
+    assert round_trip(original, tmp_path).notation == original.notation
+    assert original.notation[2] == "e4xd5"
+
+
+def test_history_allows_undoing_earlier_moves(tmp_path):
+    before_last = copy_position(played(MOVES[:-1]).position)
+    loaded = round_trip(played(), tmp_path)
+    assert loaded.history == [list(step) for step in MOVES]
+    loaded.dispatch({"action": "load", "game": {"opponent": loaded.opponent,
+                                                "moves": loaded.history[:-1]}})
+    assert loaded.position == before_last
+    assert loaded.notation == played(MOVES[:-1]).notation
+
+
+@pytest.mark.parametrize("game", [
+    None,                                              # no file chosen
+    "not a game",
+    [],
+    {},
+    {"opponent": "human"},
+    {"opponent": "human", "moves": "e2e4"},
+    {"opponent": "alien", "moves": []},
+    {"opponent": "human", "moves": [["e2"]]},
+    {"opponent": "human", "moves": [{"e2": "e4"}]},
+    {"opponent": "human", "moves": [[None, "e4"]]},
+    {"opponent": "human", "moves": [["e2", 4]]},
+    {"opponent": "human", "moves": [["e2", "e4"], ["e4", "e5"]]},  # illegal
+])
+def test_invalid_save_is_rejected_and_game_kept(game):
+    session = played(MOVES[:2])
+    before = session.view()
+    with pytest.raises(ValueError):
+        session.dispatch({"action": "load", "game": game})
+    assert session.view() == before
+    assert session.history == [list(step) for step in MOVES[:2]]
+
+
+def test_load_without_a_file_keeps_the_game():
+    session = played(MOVES[:2])
+    before = session.view()
+    with pytest.raises(ValueError):
+        session.dispatch({"action": "load"})
+    assert session.view() == before
