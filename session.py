@@ -1,7 +1,10 @@
 """Application actions and information shown beside the board."""
 
+from typing import Any
+
 from computer import choose_move
 from game import (
+    Position,
     copy_position,
     legal_moves,
     move,
@@ -26,18 +29,18 @@ PROMOTION_SETUP = [
 
 
 class Session:
-    def __init__(self, opponent="human"):
+    def __init__(self, opponent: str = "human") -> None:
         if opponent not in ("human", "computer"):
             raise ValueError("Unknown opponent")
-        self.position = new_position()
-        self.notation = []
-        self.captured = []
+        self.position: Position = new_position()
+        self.notation: list[str] = []
+        self.captured: list[str] = []
         # One entry per played move, oldest first: the move, its label, and the
         # position before it. Undo restores from it; Save/Load and Redo can reuse it.
-        self.history = []
+        self.history: list[dict[str, Any]] = []
         self.opponent = opponent
 
-    def play(self, source, target, promotion=None):
+    def play(self, source: str, target: str, promotion: str | None = None) -> None:
         before = copy_position(self.position)
         # No en passant in this variant, so a capture is always on the target square.
         taken = self.position[0].get(target)
@@ -56,7 +59,7 @@ class Session:
         if taken:
             self.captured = sorted(self.captured + [taken])
 
-    def undo_one(self):
+    def undo_one(self) -> dict[str, Any] | None:
         """Reverse the latest move. Return its history entry, or None at the start."""
         if not self.history:
             return None
@@ -67,12 +70,12 @@ class Session:
             self.captured.remove(entry["taken"])
         return entry
 
-    def undo(self):
+    def undo(self) -> list[dict[str, Any] | None]:
         """Undo one move, or against the computer, back to the human's turn.
 
         Return the undone history entries, latest first.
         """
-        undone = []
+        undone: list[dict[str, Any] | None] = []
         entry = self.undo_one()
         if entry:
             undone.append(entry)
@@ -80,18 +83,20 @@ class Session:
             undone.append(self.undo_one())
         return undone
 
-    def load(self, game):
+    def load(self, game: object) -> None:
         """Replay a saved game into a fresh session; keep the current one if any step fails."""
         if not isinstance(game, dict) or not isinstance(game.get("moves"), list):
-            raise ValueError("Not a saved game")
-        loaded = type(self)(game.get("opponent"))
+            raise ValueError("Not a saved game")  # noqa: TRY004
+        # Unchecked JSON value: Session() rejects a missing or unknown opponent.
+        opponent: Any = game.get("opponent")
+        loaded = type(self)(opponent)
         for step in game["moves"]:
             if not isinstance(step, list) or len(step) != 3:
                 raise ValueError("Not a saved game")
             loaded.play(*step)
         self.__dict__.update(vars(loaded))
 
-    def view(self):
+    def view(self) -> dict[str, Any]:
         return {
             "board": self.position[0],
             "turn": self.position[1],
@@ -102,17 +107,17 @@ class Session:
             **self.sidebar(),
         }
 
-    def computer_to_move(self):
+    def computer_to_move(self) -> bool:
         return (
             self.opponent == "computer"
             and self.position[1] == "b"
             and status(self.position) not in ("checkmate", "stalemate", "kings-only")
         )
 
-    def sidebar(self):
+    def sidebar(self) -> dict[str, Any]:
         return {"captured": self.captured}
 
-    def dispatch(self, action):
+    def dispatch(self, action: Any) -> dict[str, Any]:
         command = action.get("action")
         if command == "move":
             if self.computer_to_move():
@@ -123,7 +128,10 @@ class Session:
         elif command == "computer-move":
             if not self.computer_to_move():
                 raise ValueError("It is not the computer's turn")
-            self.play(*choose_move(self.position))
+            chosen = choose_move(self.position)
+            # computer_to_move() excludes finished games, so a move always exists.
+            assert chosen is not None
+            self.play(*chosen)
         elif command == "legal":
             source = action.get("source")
             targets = legal_moves(self.position, source)
@@ -136,9 +144,9 @@ class Session:
         elif command == "undo":
             self.undo()
         elif command == "new":
-            self.__init__(action.get("opponent", "human"))
+            self.__dict__.update(vars(type(self)(action.get("opponent", "human"))))
         elif command == "promotion-setup":
-            self.__init__()
+            self.__dict__.update(vars(type(self)()))
             for source, target in PROMOTION_SETUP:
                 self.play(source, target)
         elif command == "save":
