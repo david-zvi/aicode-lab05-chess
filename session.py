@@ -2,6 +2,7 @@
 
 from computer import choose_move
 from game import (
+    copy_position,
     legal_moves,
     move,
     new_position,
@@ -27,15 +28,46 @@ class Session:
         self.position = new_position()
         self.notation = []
         self.captured = []
+        # One entry per played move, oldest first: the move, its label, and the
+        # position before it. Undo restores from it; Save/Load and Redo can reuse it.
+        self.history = []
         self.opponent = opponent
 
     def play(self, source, target, promotion=None):
+        before = copy_position(self.position)
         # No en passant in this variant, so a capture is always on the target square.
         taken = self.position[0].get(target)
         label = move(self.position, source, target, promotion)
+        self.history.append({"source": source, "target": target, "promotion": promotion,
+                             "label": label, "before": before, "taken": taken})
         self.notation.append(label)
         if taken:
             self.captured = sorted(self.captured + [taken])
+
+    def undo_one(self):
+        """Reverse the latest move. Return its history entry, or None at the start."""
+        if not self.history:
+            return None
+        entry = self.history.pop()
+        self.position = copy_position(entry["before"])
+        self.notation.pop()
+        if entry["taken"]:
+            self.captured.remove(entry["taken"])
+        return entry
+
+    def undo(self):
+        """Undo one move, or against the computer, back to the human's turn.
+
+        Return the undone history entries, latest first.
+        """
+        undone = []
+        entry = self.undo_one()
+        if entry:
+            undone.append(entry)
+        while (self.opponent == "computer" and self.history
+               and self.position[1] == "b"):
+            undone.append(self.undo_one())
+        return undone
 
     def view(self):
         return {
@@ -70,6 +102,8 @@ class Session:
             targets = legal_moves(self.position, source)
             return {"targets": targets,
                     "promotions": [t for t in targets if promotes(self.position, source, t)]}
+        elif command == "undo":
+            self.undo()
         elif command == "new":
             self.__init__(action.get("opponent", "human"))
         elif command == "promotion-setup":
