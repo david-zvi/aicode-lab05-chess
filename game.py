@@ -1,7 +1,7 @@
 """Movement rules for the lab's chess variant.
 
 Check, checkmate and stalemate follow standard chess. There is no castling and no
-en passant.
+en passant. When only the two kings remain, the game ends at once in a draw.
 """
 
 FILES = "abcdefgh"
@@ -42,9 +42,20 @@ def in_check(board, side):
         if piece[0] != side)
 
 
+def only_kings(board):
+    """True when exactly one white king and one black king remain."""
+    return sorted(board.values()) == ["bK", "wK"]
+
+
 def status(position):
-    """Return "check", "checkmate", "stalemate", or None for the side to move."""
+    """Return "kings-only", "check", "checkmate", "stalemate", or None.
+
+    "kings-only" is a draw: only the two kings remain and no further moves are allowed.
+    The other values describe the side to move.
+    """
     board, turn = position[:2]
+    if only_kings(board):
+        return "kings-only"
     check = in_check(board, turn)
     if any(legal_moves(position, square) for square, piece in board.items()
            if piece[0] == turn):
@@ -63,7 +74,7 @@ def legal_moves(position, source):
     coordinates(source)
     board, turn = position[:2]
     piece = board.get(source)
-    if not piece or piece[0] != turn:
+    if not piece or piece[0] != turn or only_kings(board):
         return []
     targets = []
     for target in reachable(board, source):

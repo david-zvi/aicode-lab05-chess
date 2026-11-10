@@ -93,7 +93,7 @@ class Session:
 
     def computer_to_move(self):
         return (self.opponent == "computer" and self.position[1] == "b"
-                and status(self.position) not in ("checkmate", "stalemate"))
+                and status(self.position) not in ("checkmate", "stalemate", "kings-only"))
 
     def sidebar(self):
         return {"captured": self.captured}
