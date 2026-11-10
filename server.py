@@ -5,7 +5,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from session import Session
+from session import JSON, Legal, SavedGame, Session, View
 
 STATIC = Path(__file__).parent / "static"
 
@@ -22,7 +22,7 @@ def make_server(port: int = 8000) -> HTTPServer:
             self.end_headers()
             self.wfile.write(body)
 
-        def send_json(self, code: int, value: object) -> None:
+        def send_json(self, code: int, value: JSON | View | Legal | SavedGame) -> None:
             self.respond(code, json.dumps(value).encode(), "application/json")
 
         def do_GET(self) -> None:
@@ -48,7 +48,7 @@ def make_server(port: int = 8000) -> HTTPServer:
                 size = int(self.headers.get("Content-Length", "0"))
                 if not 0 < size <= 1_000_000:
                     raise ValueError("Invalid request size")
-                action = json.loads(self.rfile.read(size))
+                action: JSON = json.loads(self.rfile.read(size))
                 if not isinstance(action, dict):
                     raise TypeError("Expected an action object")
                 result = session.dispatch(action)

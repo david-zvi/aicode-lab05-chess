@@ -2,11 +2,11 @@ import http.client
 import json
 import threading
 from collections.abc import Iterator
-from typing import Any
 
 import pytest
 
 from server import make_server
+from session import JSON
 
 
 @pytest.fixture
@@ -35,20 +35,30 @@ def request(
         connection.close()
 
 
-def post_action(port: int, body: bytes) -> tuple[int, Any]:
+def post_action(port: int, body: bytes) -> tuple[int, JSON]:
     code, _, data = request(port, "POST", "/api/action", body)
-    return code, json.loads(data)
+    parsed: JSON = json.loads(data)
+    return code, parsed
+
+
+def get_state(port: int) -> JSON:
+    _, _, data = request(port, "GET", "/api/state")
+    parsed: JSON = json.loads(data)
+    return parsed
 
 
 def test_state_is_the_starting_board(port: int) -> None:
     code, content_type, data = request(port, "GET", "/api/state")
     assert code == 200
     assert content_type == "application/json"
-    view = json.loads(data)
+    view: JSON = json.loads(data)
+    assert isinstance(view, dict)
+    board = view["board"]
+    assert isinstance(board, dict)
     assert view["turn"] == "w"
-    assert view["board"]["e2"] == "wP"
-    assert view["board"]["e8"] == "bK"
-    assert len(view["board"]) == 32
+    assert board["e2"] == "wP"
+    assert board["e8"] == "bK"
+    assert len(board) == 32
 
 
 @pytest.mark.parametrize(
@@ -107,6 +117,7 @@ def test_illegal_move_is_rejected(port: int) -> None:
     body = json.dumps({"action": "move", "source": "e2", "target": "e5"}).encode()
     code, data = post_action(port, body)
     assert code == 400
+    assert isinstance(data, dict)
     assert data["error"]
 
 
@@ -114,8 +125,14 @@ def test_legal_move_updates_the_board(port: int) -> None:
     body = json.dumps({"action": "move", "source": "e2", "target": "e4"}).encode()
     code, view = post_action(port, body)
     assert code == 200
-    assert view["board"]["e4"] == "wP"
-    assert "e2" not in view["board"]
+    assert isinstance(view, dict)
+    board = view["board"]
+    assert isinstance(board, dict)
+    assert board["e4"] == "wP"
+    assert "e2" not in board
     assert view["turn"] == "b"
-    _, _, state = request(port, "GET", "/api/state")
-    assert json.loads(state)["board"]["e4"] == "wP"
+    state = get_state(port)
+    assert isinstance(state, dict)
+    state_board = state["board"]
+    assert isinstance(state_board, dict)
+    assert state_board["e4"] == "wP"

@@ -8,27 +8,26 @@ from session import Session
 def test_white_capture_promotion() -> None:
     session = Session()
     session.dispatch({"action": "promotion-setup"})
-    legal = session.dispatch({"action": "legal", "source": "b7"})
-    assert "a8" in legal["promotions"]
+    assert "a8" in session.legal("b7")["promotions"]
     session.play("b7", "a8", "Q")
-    assert session.position[0]["a8"] == "wQ"
-    assert session.position[1] == "b"
+    assert session.position.board["a8"] == "wQ"
+    assert session.position.turn == "b"
     session.play("g2", "h1", "N")
-    assert session.position[0]["h1"] == "bN"
+    assert session.position.board["h1"] == "bN"
     assert "b7" in legal_moves(session.position, "a8")
 
 
 @pytest.mark.parametrize("piece", list("QRBN"))
 def test_chosen_piece_and_notation(piece: str) -> None:
-    position: Position = [{"a1": "wK", "h6": "bK", "d7": "wP"}, "w"]
+    position = Position({"a1": "wK", "h6": "bK", "d7": "wP"}, "w")
     label = move(position, "d7", "d8", piece)
-    assert position[0]["d8"] == "w" + piece
+    assert position.board["d8"] == "w" + piece
     assert label.startswith("d7-d8=" + piece)
 
 
 @pytest.mark.parametrize("choice", [None, "K", "P", "X"])
 def test_promotion_needs_a_valid_choice(choice: str | None) -> None:
-    position: Position = [{"a1": "wK", "h6": "bK", "d7": "wP"}, "w"]
+    position = Position({"a1": "wK", "h6": "bK", "d7": "wP"}, "w")
     before = copy_position(position)
     with pytest.raises(ValueError):
         move(position, "d7", "d8", choice)
@@ -36,7 +35,7 @@ def test_promotion_needs_a_valid_choice(choice: str | None) -> None:
 
 
 def test_computer_promotes() -> None:
-    position: Position = [{"a8": "wK", "e8": "bK", "h2": "bP"}, "b"]
+    position = Position({"a8": "wK", "e8": "bK", "h2": "bP"}, "b")
     assert choose_move(position) == ("h2", "h1", "Q")
 
 

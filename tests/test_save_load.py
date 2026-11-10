@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from game import new_position
-from session import Session
+from session import JSON, Session
 
 MOVES = [("e2", "e4"), ("d7", "d5"), ("e4", "d5"), ("d8", "d5"), ("b1", "c3")]
 
@@ -19,10 +19,16 @@ def played(moves: list[tuple[str, str]] = MOVES, opponent: str = "human") -> Ses
 def round_trip(session: Session, tmp_path: Path) -> Session:
     """Save through a real file and load into a fresh session."""
     path = tmp_path / "game.json"
-    path.write_text(json.dumps(session.dispatch({"action": "save"})))
+    path.write_text(json.dumps(session.save()))
+    data: JSON = json.loads(path.read_text())
     loaded = Session()
-    loaded.dispatch({"action": "load", "game": json.loads(path.read_text())})
+    loaded.dispatch({"action": "load", "game": data})
     return loaded
+
+
+def test_save_action_returns_the_saved_game() -> None:
+    session = played()
+    assert session.dispatch({"action": "save"}) == session.save()
 
 
 def test_initial_game(tmp_path: Path) -> None:
@@ -78,10 +84,10 @@ def test_promotion_and_captures(tmp_path: Path) -> None:
     )
     loaded = round_trip(original, tmp_path)
     assert loaded.view() == original.view()
-    assert loaded.position[0]["a8"] == "wN"
+    assert loaded.position.board["a8"] == "wN"
     assert loaded.captured == ["bP", "bR", "wP"]
     loaded.dispatch({"action": "undo"})
-    assert loaded.position[0]["b7"] == "wP"
+    assert loaded.position.board["b7"] == "wP"
     assert loaded.captured == ["bP", "wP"]
 
 
@@ -105,7 +111,7 @@ def test_promotion_and_captures(tmp_path: Path) -> None:
         {"opponent": "human", "moves": [["e2", "e4", None], ["e4", "e5", None]]},
     ],
 )
-def test_invalid_save_is_rejected_and_game_kept(game: object) -> None:
+def test_invalid_save_is_rejected_and_game_kept(game: JSON) -> None:
     session = played(MOVES[:2])
     before = session.view()
     with pytest.raises(ValueError):

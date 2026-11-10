@@ -21,7 +21,7 @@ CHECKMATE = 1000
 
 
 def candidate_moves(position: Position) -> Iterator[Move]:
-    board, turn = position[:2]
+    board, turn = position.board, position.turn
     for source, piece in sorted(board.items()):
         if piece[0] == turn:
             for target in legal_moves(position, source):
@@ -36,18 +36,18 @@ def evaluate(position: Position, side: str) -> int:
     """Score a position for side: material, unless the game is over."""
     result = status(position)
     if result == "checkmate":
-        return CHECKMATE if position[1] != side else -CHECKMATE
+        return CHECKMATE if position.turn != side else -CHECKMATE
     if result == "stalemate":
         return 0
     return sum(
         VALUES[piece[1]] * (1 if piece[0] == side else -1)
-        for piece in position[0].values()
+        for piece in position.board.values()
     )
 
 
 def choose_move(position: Position, rng: random.Random | None = None) -> Move | None:
     """Return the move with the best score after it, or None if there is no move."""
-    side = position[1]
+    side = position.turn
     best: list[Move] = []
     best_score = None
     for candidate in candidate_moves(position):

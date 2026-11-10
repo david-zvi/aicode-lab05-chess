@@ -4,15 +4,19 @@ Check, checkmate and stalemate follow standard chess. There is no castling and n
 en passant. When only the two kings remain, the game ends at once in a draw.
 """
 
-from typing import Any
+from dataclasses import dataclass
 
 FILES = "abcdefgh"
 BACK_ROW = "RNBQKBNR"
 
 # Square name to piece, e.g. {"e2": "wP"}.
 Board = dict[str, str]
-# [board, side to move]. A list so moves can update the side in place, hence Any.
-Position = list[Any]
+
+
+@dataclass
+class Position:
+    board: Board
+    turn: str
 
 
 def new_position() -> Position:
@@ -22,16 +26,16 @@ def new_position() -> Position:
         board[file + "2"] = "wP"
         board[file + "7"] = "bP"
         board[file + "8"] = "b" + piece
-    return [board, "w"]
+    return Position(board, "w")
 
 
 def copy_position(position: Position) -> Position:
     """Copy the board and side to move."""
-    return [position[0].copy(), position[1]]
+    return Position(position.board.copy(), position.turn)
 
 
-def coordinates(square: object) -> tuple[int, int]:
-    if not isinstance(square, str) or len(square) != 2:
+def coordinates(square: str) -> tuple[int, int]:
+    if len(square) != 2:
         raise ValueError("Expected a square such as e2")
     if square[0] not in FILES or square[1] not in "12345678":
         raise ValueError("Square is outside the board")
@@ -64,7 +68,7 @@ def status(position: Position) -> str | None:
     "kings-only" is a draw: only the two kings remain and no further moves are allowed.
     The other values describe the side to move.
     """
-    board, turn = position[:2]
+    board, turn = position.board, position.turn
     if only_kings(board):
         return "kings-only"
     check = in_check(board, turn)
@@ -79,14 +83,14 @@ def status(position: Position) -> str | None:
 
 def winner(position: Position) -> str | None:
     if status(position) == "checkmate":
-        return "White" if position[1] == "b" else "Black"
+        return "White" if position.turn == "b" else "Black"
     return None
 
 
 def legal_moves(position: Position, source: str) -> list[str]:
     """Moves for the side to move that do not leave its own king in check."""
     coordinates(source)
-    board, turn = position[:2]
+    board, turn = position.board, position.turn
     piece = board.get(source)
     if not piece or piece[0] != turn or only_kings(board):
         return []
@@ -157,8 +161,8 @@ PROMOTION_PIECES = ("Q", "R", "B", "N")
 
 
 def promotes(position: Position, source: str, target: str) -> bool:
-    piece = position[0].get(source)
-    return bool(piece) and piece[1] == "P" and target[1] in "18"
+    piece = position.board.get(source)
+    return piece is not None and piece[1] == "P" and target[1] in "18"
 
 
 def move(
@@ -176,13 +180,13 @@ def move(
         raise ValueError("Choose a queen, rook, bishop or knight to promote to")
     if not promoting and promotion is not None:
         raise ValueError("Only a pawn reaching the last rank promotes")
-    board = position[0]
+    board = position.board
     piece = board.pop(source)
     captured = board.get(target)
     board[target] = piece
-    if promoting:
+    if promotion:
         board[target] = piece[0] + promotion
-    position[1] = other(position[1])
+    position.turn = other(position.turn)
     suffix = {"check": "+", "checkmate": "#"}.get(status(position) or "", "")
-    chosen = f"={promotion}" if promoting else ""
+    chosen = f"={promotion}" if promotion else ""
     return source + ("x" if captured else "-") + target + chosen + suffix
