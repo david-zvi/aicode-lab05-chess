@@ -69,6 +69,17 @@ class Session:
             undone.append(self.undo_one())
         return undone
 
+    def load(self, game):
+        """Replay a saved game into a fresh session; keep the current one if any step fails."""
+        if not isinstance(game, dict) or not isinstance(game.get("moves"), list):
+            raise ValueError("Not a saved game")
+        loaded = type(self)(game.get("opponent"))
+        for step in game["moves"]:
+            if not isinstance(step, list) or len(step) != 3:
+                raise ValueError("Not a saved game")
+            loaded.play(*step)
+        self.__dict__.update(vars(loaded))
+
     def view(self):
         return {
             "board": self.position[0],
@@ -110,6 +121,12 @@ class Session:
             self.__init__()
             for source, target in PROMOTION_SETUP:
                 self.play(source, target)
+        elif command == "save":
+            # Board, turn, notation, captures and undo history are rebuilt by replaying on load.
+            return {"opponent": self.opponent,
+                    "moves": [[e["source"], e["target"], e["promotion"]] for e in self.history]}
+        elif command == "load":
+            self.load(action.get("game"))
         else:
             raise ValueError("Unknown action")
         return self.view()

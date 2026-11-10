@@ -166,6 +166,34 @@ document.querySelector('#controls').onclick = async event => {
   finally { busy = false; }
 };
 
+document.querySelector('#save').onclick = async () => {
+  try {
+    const game = await request({action: 'save'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(game)], {type: 'application/json'}));
+    link.download = 'chess-game.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href));
+  } catch (error) { message.textContent = error.message; }
+};
+
+const loadFile = document.querySelector('#load-file');
+document.querySelector('#load').onclick = () => loadFile.click();
+loadFile.onchange = async () => {
+  const file = loadFile.files[0];
+  loadFile.value = '';
+  if (!file || busy) return;
+  busy = true;
+  try {
+    let game;
+    try { game = JSON.parse(await file.text()); } catch { throw new Error('Not a saved game'); }
+    state = await request({action: 'load', game});
+    selected = null; targets = [];
+    message.textContent = ''; render();
+    await computerReply();
+  } catch (error) { message.textContent = error.message; }
+  finally { busy = false; }
+};
+
 try {
   const response = await fetch('/api/state');
   if (!response.ok) throw new Error('Could not load the game');
