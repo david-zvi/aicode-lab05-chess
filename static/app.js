@@ -80,6 +80,7 @@ function render() {
   document.querySelector('#turn').textContent =
     state.status === 'checkmate' ? `Checkmate. ${winner}`
     : state.status === 'stalemate' ? 'Stalemate. Draw'
+    : state.status === 'kings-only' ? 'Draw — Only two kings remain.'
     : state.status === 'check' ? `${side}. Check` : side;
   const pairs = [];
   for (let i = 0; i < state.moves.length; i += 2) pairs.push(state.moves.slice(i, i + 2));
@@ -111,7 +112,7 @@ function coordinate(kind, text) {
 
 // Against the computer, it answers after a short pause so each move is seen and heard.
 async function computerReply() {
-  const over = state.status === 'checkmate' || state.status === 'stalemate';
+  const over = ['checkmate', 'stalemate', 'kings-only'].includes(state.status);
   if (state.opponent !== 'computer' || state.turn !== 'b' || over) return;
   await new Promise(resolve => setTimeout(resolve, 500));
   state = await request({action: 'computer-move'});

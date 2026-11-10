@@ -21,9 +21,12 @@ Standard movement, captures, check, checkmate and stalemate apply: you cannot le
 own king in check, checkmate wins, and stalemate is a draw. Pawns initially remain pawns at
 the far rank; a later branch adds promotion to a piece the player chooses. There is no clock.
 
+When only the two kings remain, the game ends at once in a draw and no further moves are
+allowed.
+
 **Not supported: castling and en passant.** Neither move exists in this game. The other
-draw rules (insufficient material, threefold repetition, the fifty-move rule) are not
-implemented either.
+draw rules (other insufficient-material cases, threefold repetition, the fifty-move rule)
+are not implemented either.
 
 To reach promotion quickly from a new game, play a2-a4, h7-h5, a4-a5, h5-h4, a5-a6,
 h4-h3, a6-b7, h3-g2. White can then play b7 to a8. In tests, the `promotion-setup` action
