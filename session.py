@@ -1,6 +1,7 @@
 """Application actions and information shown beside the board."""
 
 from computer import choose_move
+from captured import missing_pieces
 from game import (
     legal_moves,
     move,
@@ -26,6 +27,7 @@ class Session:
             raise ValueError("Unknown opponent")
         self.position = new_position()
         self.notation = []
+        self.captured = []
         self.opponent = opponent
 
     def play(self, source, target):
@@ -34,7 +36,7 @@ class Session:
         self.after_move()
 
     def after_move(self):
-        pass
+        self.captured = missing_pieces(self.position)
 
     def view(self):
         return {
@@ -52,7 +54,7 @@ class Session:
                 and status(self.position) not in ("checkmate", "stalemate"))
 
     def sidebar(self):
-        return {}
+        return {"captured": self.captured}
 
     def dispatch(self, action):
         command = action.get("action")
